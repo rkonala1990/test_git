@@ -96,7 +96,9 @@ public class PaymentService {
      * @param userId the user whose card details are requested
      * @return masked card summary string
      */
-    @PreAuthorize("hasRole('ROLE_USER')")
+    // PCI Req 7/8: IDOR fix — binds userId to the authenticated principal so
+    // a caller can only retrieve their own card details, not another user's.
+    @PreAuthorize("hasRole('ROLE_USER') and #userId == authentication.name")
     @Transactional(readOnly = true)
     public String getCardDetails(String userId) {
         // PCI Req 3: query returns the stored (encrypted) PAN; we mask before returning
@@ -125,7 +127,7 @@ public class PaymentService {
      * PCI DSS Req 3.3: PAN must be masked when displayed.
      *
      * @param pan full PAN string
-     * @return masked string e.g. "****-****-****-1234"
+     * @return masked string e.g. "************1234" (asterisks for all but last 4 digits)
      */
     private String maskPan(String pan) {
         if (pan == null || pan.length() < 4) {
